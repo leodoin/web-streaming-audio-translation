@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "author": "",
   "license": "ISC",
@@ -11,10 +12,14 @@
   "dependencies": {
     "@google-cloud/speech": "^6.7.0",
     "axios": "^1.7.7",
+    "child-process": "^1.0.2",
     "express": "^4.21.1",
     "http": "^0.0.1-security",
     "microsoft-cognitiveservices-speech-sdk": "^1.41.0",
     "node-record-lpcm16": "^1.0.1",
     "socket.io": "^4.8.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
   }
 }

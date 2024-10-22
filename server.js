@@ -12,29 +12,19 @@ app.use(express.static('public'));
 const fs = require('fs');
 const path = require('path');
 
-// Create a writable stream for the output file
-const outputFilePath = path.join(__dirname, 'output.pcm');
-const fileStream = fs.createWriteStream(outputFilePath);
-
-console.log('Output file:', outputFilePath);
-
 
 // Set up environment variables (replace with your own keys if not using env vars)
 const speechKey = process.env.AZURE_SPEECH_KEY || 'your_speech_api_key';
 const serviceRegion = process.env.AZURE_SPEECH_REGION || 'your_region';
+console.log(`Using speech key ${speechKey} in region ${serviceRegion}`);
+
 
 io.on('connection', (socket) => {
     console.log('Client connected via Socket.io');
 
-    // Set up Azure Speech SDK
-    const translationConfig = sdk.SpeechTranslationConfig.fromSubscription(speechKey, serviceRegion);
-    translationConfig.speechRecognitionLanguage = 'en-US';
-    const translateTo = ['fr', 'es', 'de'];
-    translateTo.forEach(lang => translationConfig.addTargetLanguage(lang));
+    let {recognizer, pushStream} = setAzureSdk();
+    let fileStream = pcmFileStream('output');
 
-    const pushStream = sdk.AudioInputStream.createPushStream();
-    const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
-    const recognizer = new sdk.TranslationRecognizer(translationConfig, audioConfig);
 
     recognizer.recognizing = (s, e) => {
         console.log('Interim result:', e.result.text);
@@ -42,38 +32,86 @@ io.on('connection', (socket) => {
     };
 
     recognizer.recognized = (s, e) => {
+        // Check if the result is a translated speech result
         if (e.result.reason === sdk.ResultReason.TranslatedSpeech) {
             console.log(`Final result: ${e.result.text}`);
-            const translations = {};
-            translateTo.forEach(lang => {
-                translations[lang] = e.result.translations.get(lang);
-            });
+            console.log('Translations:', e.result.translations);
+            const translations = {}
+            e.result.translations.privMap.privKeys.forEach((lang, index) => {
+                console.log('Language:', lang);
+                console.log('Index:', index);
+                console.log('Translation:', e.result.translations.privMap.privValues[index]);
+                translations[lang] = e.result.translations.privMap.privValues[index];
+            })
+            console.log({ text: e.result.text, translations });
             socket.emit('finalResult', { text: e.result.text, translations });
         }
     };
 
-    recognizer.startContinuousRecognitionAsync(() => {
-        console.log('Recognition started...');
-    }, (err) => {
-        console.error('Error starting recognition:', err);
+    socket.on('ping', () => {
+        console.log('Received ping');
+        socket.emit('pong');
     });
+
+
+    socket.on('startStream', () => {
+        console.log('Starting stream...');
+
+        recognizer.startContinuousRecognitionAsync(() => {
+            console.log('Recognition started...');
+        }, (err) => {
+            console.error('Error starting recognition:', err);
+        });
+    })
 
     // Handle incoming audio chunks from the client
     socket.on('audioChunk', (pcmChunk) => {
         // console.log('Received PCM audio chunk');
         const buffer = Buffer.from(pcmChunk);  // Convert to Node.js Buffer
-        console.log('Received audio chunk, size:', buffer.length);
+        // console.debug('Received audio chunk, size:', buffer.length);
         pushStream.write(buffer);
         fileStream.write(buffer);
     });
 
+    socket.on('endOfStream', () => {
+        console.log('End of stream');
+        closeStream(pushStream, fileStream, recognizer);
+        // playPCMFile(path.join(__dirname, 'public', 'output.pcm'));
+    });
+
     socket.on('disconnect', () => {
         console.log('Client disconnected, closing streams...');
-        pushStream.close();
-        recognizer.close();
-        playPCMFile(outputFilePath);
+        closeStream(pushStream, fileStream, recognizer);
     });
 });
+
+function closeStream(pushStream, fileStream, recognizer) {
+    pushStream.close();
+    fileStream.end();
+    recognizer.stopContinuousRecognitionAsync(() => {
+        console.log('Recognition stopped');
+        recognizer.close();
+    });
+}
+
+function pcmFileStream(fileName) {
+    const outputFilePath = path.join(__dirname, 'public',  `${fileName}.pcm`);
+    return fs.createWriteStream(outputFilePath);
+}
+
+function setAzureSdk(){
+    // Set up Azure Speech SDK
+    const translationConfig = sdk.SpeechTranslationConfig.fromSubscription(speechKey, serviceRegion);
+    translationConfig.speechRecognitionLanguage = 'en-US';
+    const translateTo = ['pt', 'fr', 'es', 'de'];
+    translateTo.forEach(lang => translationConfig.addTargetLanguage(lang));
+
+    const pushStream = sdk.AudioInputStream.createPushStream();
+    const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
+    const recognizer = new sdk.TranslationRecognizer(translationConfig, audioConfig);
+
+    return {recognizer, pushStream};
+}
 
 // Start the server
 server.listen(3000, () => {
