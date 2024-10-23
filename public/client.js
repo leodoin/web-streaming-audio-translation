@@ -28,7 +28,7 @@ function setupSocket(socket){
     });
 
     socket.on('interimResult', (data) => {
-        console.log('Interim result:');
+        console.log('Interim result:', data.text);
     });
 
     socket.on('finalResult', (data) => {

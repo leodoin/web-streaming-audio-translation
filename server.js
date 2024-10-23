@@ -23,22 +23,18 @@ io.on('connection', (socket) => {
 
     socket.on('startStream', () => {
         console.log('Starting stream...');
-        const rec = recognizer.start({
+        recognizer.start({
             source: 'en-US',
             target: ['pt', 'fr', 'es', 'de'],
-
+            onRecognized: (finalResult) => {
+                console.log('Recognized:', finalResult);
+                socket.emit('finalResult',finalResult);
+            },
+            onRecognizing: (interimResult) => {
+                console.log('Recognizing:', interimResult);
+                socket.emit('interimResult',interimResult);
+            }
         });
-
-        rec.onRecognizing = (s,e) => {
-            console.log('Recognizing:', e);
-        }
-        rec.onRecognized = (s,e) => {
-            console.log('Recognized:', e);
-        }
-
-        rec.onCanceled = (s,e) => {
-            console.log('Canceled:', e);
-        }
     });
 
     socket.on('audioChunk', (pcmChunk) => {
@@ -83,26 +79,23 @@ function Recognizer() {
         const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
         recognizer = new sdk.TranslationRecognizer(translationConfig, audioConfig);
 
-        console.log(recognizer)
-
-        recognizer.onRecognized = (s,e) => {
-            console.log('Recognized:', e.result.text);
-            if (e.result.reason === sdk.ResultReason.TranslatedSpeech) {
-                const translations = {}
-                e.result.translations.privMap.privKeys.forEach((lang, index) => {
-                    translations[lang] = e.result.translations.privMap.privValues[index];
-                })
-                onRecognized({ text: e.result.text, translations });
-            }
-        };
-
-        recognizer.onRecognizing = (s,e ) => {
-            console.log('Recognizing:', e.result.text);
+        recognizer.recognized = (s, e) => {
+            // Check if the result is a translated speech result
+            if(e.result.reason !== sdk.ResultReason.TranslatedSpeech) return
             const translations = {}
             e.result.translations.privMap.privKeys.forEach((lang, index) => {
                 translations[lang] = e.result.translations.privMap.privValues[index];
             })
+            onRecognized({ text: e.result.text, translations });
+        };
+
+        recognizer.recognizing = (s, e) => {
+            // Check if the result is a translated speech result
+            const translations = {}
+            e.result.translations.privMap.privKeys.forEach((lang, index) => {
+                translations[lang] = e.result.translations.privMap.privValues[index];
             onRecognizing({ text: e.result.text, translations });
+            });
         };
 
         recognizer.startContinuousRecognitionAsync(() => {
