@@ -18,35 +18,13 @@ const speechKey = process.env.AZURE_SPEECH_KEY || 'your_speech_api_key';
 const serviceRegion = process.env.AZURE_SPEECH_REGION || 'your_region';
 console.log(`Using speech key ${speechKey} in region ${serviceRegion}`);
 
+let recognizer;
+let pushStream;
+let fileStream;
+
 
 io.on('connection', (socket) => {
     console.log('Client connected via Socket.io');
-
-    let {recognizer, pushStream} = setAzureSdk();
-    let fileStream = pcmFileStream('output');
-
-
-    recognizer.recognizing = (s, e) => {
-        console.log('Interim result:', e.result.text);
-        socket.emit('interimResult', { text: e.result.text });
-    };
-
-    recognizer.recognized = (s, e) => {
-        // Check if the result is a translated speech result
-        if (e.result.reason === sdk.ResultReason.TranslatedSpeech) {
-            console.log(`Final result: ${e.result.text}`);
-            console.log('Translations:', e.result.translations);
-            const translations = {}
-            e.result.translations.privMap.privKeys.forEach((lang, index) => {
-                console.log('Language:', lang);
-                console.log('Index:', index);
-                console.log('Translation:', e.result.translations.privMap.privValues[index]);
-                translations[lang] = e.result.translations.privMap.privValues[index];
-            })
-            console.log({ text: e.result.text, translations });
-            socket.emit('finalResult', { text: e.result.text, translations });
-        }
-    };
 
     socket.on('ping', () => {
         console.log('Received ping');
@@ -57,7 +35,35 @@ io.on('connection', (socket) => {
     socket.on('startStream', () => {
         console.log('Starting stream...');
 
-        recognizer.startContinuousRecognitionAsync(() => {
+        const obj = setAzureSdk();
+        recognizer = obj.recognizer;
+        pushStream = obj.pushStream;
+        fileStream = pcmFileStream('output');
+    
+    
+        recognizer.recognizing = (s, e) => {
+            console.log('Interim result:', e.result.text);
+            socket.emit('interimResult', { text: e.result.text });
+        };
+    
+        recognizer.recognized = (s, e) => {
+            // Check if the result is a translated speech result
+            if (e.result.reason === sdk.ResultReason.TranslatedSpeech) {
+                console.log(`Final result: ${e.result.text}`);
+                console.log('Translations:', e.result.translations);
+                const translations = {}
+                e.result.translations.privMap.privKeys.forEach((lang, index) => {
+                    console.log('Language:', lang);
+                    console.log('Index:', index);
+                    console.log('Translation:', e.result.translations.privMap.privValues[index]);
+                    translations[lang] = e.result.translations.privMap.privValues[index];
+                })
+                console.log({ text: e.result.text, translations });
+                socket.emit('finalResult', { text: e.result.text, translations });
+            }
+        };
+
+        recognizer?.startContinuousRecognitionAsync(() => {
             console.log('Recognition started...');
         }, (err) => {
             console.error('Error starting recognition:', err);
@@ -86,11 +92,11 @@ io.on('connection', (socket) => {
 });
 
 function closeStream(pushStream, fileStream, recognizer) {
-    pushStream.close();
-    fileStream.end();
-    recognizer.stopContinuousRecognitionAsync(() => {
+    pushStream?.close();
+    fileStream?.end();
+    recognizer?.stopContinuousRecognitionAsync(() => {
         console.log('Recognition stopped');
-        recognizer.close();
+        recognizer?.close();
     });
 }
 
