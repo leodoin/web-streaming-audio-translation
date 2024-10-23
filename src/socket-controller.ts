@@ -1,22 +1,23 @@
-import { recognizer } from "./recognition-service.js";
+import { recognizer } from "./recognition-service";
+import { Socket } from "socket.io";
 
-export const connectionController = (socket) => {
+export const connectionController = (socket: Socket) => {
     console.log(`Client connected via Socket.io: ${socket.id}`);
 
     socket.on('startStream', () => {
         console.log('Starting stream...');
-        recognizer.start({
-            source: 'en-US',
-            target: ['pt', 'fr', 'es', 'de'],
-            onRecognized: (finalResult) => {
+        recognizer.start(
+            'en-US',
+            ['pt', 'fr', 'es', 'de'],
+            (finalResult) => {
                 console.log('Recognized:', finalResult);
                 socket.emit('finalResult',finalResult);
             },
-            onRecognizing: (interimResult) => {
+            (interimResult) => {
                 console.log('Recognizing:', interimResult);
                 socket.emit('interimResult',interimResult);
             }
-        });
+        );
     });
 
     socket.on('audioChunk', (pcmChunk) => {

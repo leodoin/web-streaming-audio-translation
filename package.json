@@ -2,25 +2,28 @@
   "name": "speech-to-text",
   "type": "module",
   "version": "1.0.0",
-  "main": "app.js",
+  "main": "src/app.ts",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "dev": "nodemon"
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@google-cloud/speech": "^6.7.0",
-    "axios": "^1.7.7",
-    "child-process": "^1.0.2",
     "express": "^4.21.1",
     "http": "^0.0.1-security",
     "microsoft-cognitiveservices-speech-sdk": "^1.41.0",
-    "node-record-lpcm16": "^1.0.1",
     "socket.io": "^4.8.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.7"
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.7.9",
+    "@types/socket.io": "^3.0.1",
+    "nodemon": "^3.1.7",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
   }
 }

@@ -4,10 +4,27 @@ import sdk from 'microsoft-cognitiveservices-speech-sdk';
 const speechKey = process.env.AZURE_SPEECH_KEY || 'your_speech_api_key';
 const serviceRegion = process.env.AZURE_SPEECH_REGION || 'your_region';
 
-let azureRecognizer
-let pushStream
+let azureRecognizer: sdk.TranslationRecognizer
+let pushStream: sdk.PushAudioInputStream
 
-const start = ({source, target, onRecognized, onRecognizing}) => {
+
+export type Translations = {
+    [key: string]: string
+}
+
+export type RecognizedResult = {
+    text: string,
+    translations: Translations
+}
+
+export type Language = 'en-US' | 'pt' | 'es' | 'fr' | 'de'
+
+const start = (
+        source: Language,
+        target: Language[],
+        onRecognized: (result: RecognizedResult) => void,
+        onRecognizing: (result: RecognizedResult) => void
+    ) => {
     console.log(`translating from ${source} to ${target}`);
     console.log(`Using speech key ${speechKey} in region ${serviceRegion}`);
     const translationConfig = sdk.SpeechTranslationConfig.fromSubscription(speechKey, serviceRegion);
@@ -21,20 +38,20 @@ const start = ({source, target, onRecognized, onRecognizing}) => {
     azureRecognizer.recognized = (s, e) => {
         // Check if the result is a translated speech result
         if(e.result.reason !== sdk.ResultReason.TranslatedSpeech) return
-        const translations = {}
-        e.result.translations.privMap.privKeys.forEach((lang, index) => {
-            translations[lang] = e.result.translations.privMap.privValues[index];
-        })
+        const translations: Translations = {};
+        e.result.translations.languages.forEach((lang: string) => {
+            translations[lang] = e.result.translations.get(lang);
+        });
         onRecognized({ text: e.result.text, translations });
     };
 
     azureRecognizer.recognizing = (s, e) => {
         // Check if the result is a translated speech result
-        const translations = {}
-        e.result.translations.privMap.privKeys.forEach((lang, index) => {
-            translations[lang] = e.result.translations.privMap.privValues[index];
-        onRecognizing({ text: e.result.text, translations });
+        const translations: Translations = {};
+        e.result.translations.languages.forEach((lang: string) => {
+            translations[lang] = e.result.translations.get(lang);
         });
+        onRecognizing({ text: e.result.text, translations });
     };
 
     azureRecognizer.startContinuousRecognitionAsync(() => {
@@ -46,8 +63,8 @@ const start = ({source, target, onRecognized, onRecognizing}) => {
     return azureRecognizer;
 }
 
-const push = (pcmChunk) => {
-    if(!pushStream || pushStream.isClosed){ 
+const push = (pcmChunk: ArrayBuffer) => {
+    if(!pushStream){ 
         throw new Error('Stream is closed') 
     }
     // console.log('Pushing audio chunk', pcmChunk.length);
