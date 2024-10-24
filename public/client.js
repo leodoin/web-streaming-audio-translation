@@ -28,7 +28,11 @@ function setupSocket(socket){
     });
 
     socket.on('interimResult', (data) => {
-        console.log('Interim result:', data.text);
+        let translations = `<p><strong>Original:</strong> ${data.text}</p>`;
+        Object.keys(data.translations).forEach(lang => {
+            translations += `<p><strong>${lang}:</strong> ${data.translations[lang]}</p>`;
+        });
+        updateInterimResult(translations);
     });
 
     socket.on('finalResult', (data) => {
@@ -37,7 +41,7 @@ function setupSocket(socket){
         Object.keys(data.translations).forEach(lang => {
             translations += `<p><strong>${lang}:</strong> ${data.translations[lang]}</p>`;
         });
-        document.getElementById('results').innerHTML += translations;
+        appendFinalResult(translations);
     });
 
     socket.on('disconnect', (data) => {
@@ -89,6 +93,21 @@ function stopRecording() {
     document.getElementById('stop').disabled = true;
     socket.emit('endOfStream');
 }
+
+function updateInterimResult(text) {
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = text;  // Use innerHTML to preserve formatting
+}
+
+function appendFinalResult(text) {
+    const historyDiv = document.getElementById('history');
+    const resultElement = document.createElement('div');
+    resultElement.className = 'final';
+    resultElement.innerHTML = text;  // Use innerHTML to preserve formatting
+    historyDiv.appendChild(resultElement);
+    historyDiv.scrollTop = historyDiv.scrollHeight;  // Auto-scroll to the bottom
+}
+
 
 document.getElementById('ping').addEventListener('click', ping);
 document.getElementById('start').addEventListener('click', startRecording);

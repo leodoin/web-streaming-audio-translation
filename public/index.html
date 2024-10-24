@@ -3,16 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time Speech Translation</title>
+    <title>Translation App</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>Real-Time Speech Translation</h1>
+    <h1>Translation App</h1>
 
-    <button id="start">Start Recording</button>
-    <button id="stop" disabled>Stop Recording</button>
-    <button id="ping">Ping</button>
+    <div class="button-container">
+        <button id="start" onclick="startRecording()">Start Recording</button>
+        <button id="stop" onclick="stopRecording()" disabled>Stop Recording</button>
+        <button id="ping" onclick="sendPing()">Ping</button>
+    </div>
     <h3>Results</h3>
     <div id="results"></div>
+    <h3>History</h3>
+    <div id="history"></div>
+
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="client.js"></script> <!-- Link to your external JavaScript file -->
