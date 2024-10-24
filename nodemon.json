@@ -1,4 +1,4 @@
 {
   "watch": ["src", "public"],
-  "exec": "tsx src/app.ts"
+  "exec": "tsx --env-file=.env src/app.ts"
 }

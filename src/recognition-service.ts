@@ -1,23 +1,24 @@
 import sdk from 'microsoft-cognitiveservices-speech-sdk';
 
-// Set up environment variables (replace with your own keys if not using env vars)
-const speechKey = process.env.AZURE_SPEECH_KEY || 'your_speech_api_key';
-const serviceRegion = process.env.AZURE_SPEECH_REGION || 'your_region';
+const speechKey = process.env.AZURE_SPEECH_KEY;
+const serviceRegion = process.env.AZURE_SPEECH_REGION;
+
+const translationConfig = sdk.SpeechTranslationConfig.fromSubscription(speechKey, serviceRegion);
 
 let azureRecognizer: sdk.TranslationRecognizer
 let pushStream: sdk.PushAudioInputStream
 
 
-export type Translations = {
+type Translations = {
     [key: string]: string
 }
 
-export type RecognizedResult = {
+type RecognizedResult = {
     text: string,
     translations: Translations
 }
 
-export type Language = 'en-US' | 'pt' | 'es' | 'fr' | 'de'
+type Language = 'en-US' | 'pt' | 'es' | 'fr' | 'de'
 
 const start = (
         source: Language,
@@ -26,8 +27,7 @@ const start = (
         onRecognizing: (result: RecognizedResult) => void
     ) => {
     console.log(`translating from ${source} to ${target}`);
-    console.log(`Using speech key ${speechKey} in region ${serviceRegion}`);
-    const translationConfig = sdk.SpeechTranslationConfig.fromSubscription(speechKey, serviceRegion);
+    console.debug(`Using speech key ${speechKey} in region ${serviceRegion}`);
     translationConfig.speechRecognitionLanguage = source ;
     target.forEach(lang => translationConfig.addTargetLanguage(lang));
 

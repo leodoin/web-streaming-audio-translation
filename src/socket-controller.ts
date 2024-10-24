@@ -9,18 +9,12 @@ export const connectionController = (socket: Socket) => {
         recognizer.start(
             'en-US',
             ['pt', 'fr', 'es', 'de'],
-            (finalResult) => {
-                console.log('Recognized:', finalResult);
-                socket.emit('finalResult',finalResult);
-            },
-            (interimResult) => {
-                console.log('Recognizing:', interimResult);
-                socket.emit('interimResult',interimResult);
-            }
+            finalResult => socket.emit('finalResult',finalResult),
+            interimResult => socket.emit('interimResult',interimResult)
         );
     });
 
-    socket.on('audioChunk', (pcmChunk) => {
+    socket.on('audioChunk', (pcmChunk: ArrayBuffer) => {
         recognizer.push(pcmChunk);
     });
 
